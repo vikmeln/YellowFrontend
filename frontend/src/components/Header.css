@@ -1,0 +1,33 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: #111;
+  color: white;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.search {
+  width: 40%;
+  padding: 8px;
+  border-radius: 20px;
+  border: none;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.actions button {
+  background: #ffcc00;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 20px;
+}
