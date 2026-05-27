@@ -1,33 +1,25 @@
-import { useState, useEffect } from "react";
-import ProductCard from "./ProductCard";
-import { getProducts } from "../services/product";
 import "./ProductList.css";
+import ProductCard from "./ProductCard";
 
-export default function ProductList() {
-  const [products, setProducts] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const data = await getProducts();
-      setProducts(data);
-    } catch (error) {
-      alert("Ошибка при получении данных товаров");
-    }
-  };
+export default function ProductList({
+  products,
+  categories,
+  onAddToCart,
+}: any) {
+  if (!products.length) {
+    return <div className="empty-state">Товары не найдены.</div>;
+  }
 
   return (
-    <div className="grid">
-      {products.length === 0 ? (
-        <p>Нет товаров</p>
-      ) : (
-        products.map((product: any) => (
-          <ProductCard key={product.id} product={product} />
-        ))
-      )}
+    <div className="product-grid">
+      {products.map((product: any) => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          categories={categories}
+          onAddToCart={onAddToCart}
+        />
+      ))}
     </div>
   );
 }

@@ -1,33 +1,49 @@
-.header {
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px 20px;
-  background: #111;
-  color: white;
+  gap: 1rem;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+  background: rgba(255, 248, 223, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid #efdda0;
 }
 
-.logo {
+.brand {
+  font-size: 1.4rem;
   font-weight: bold;
-  font-size: 20px;
 }
 
-.search {
-  width: 40%;
-  padding: 8px;
-  border-radius: 20px;
-  border: none;
-}
-
-.actions {
+.nav-actions {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
-.actions button {
-  background: #ffcc00;
-  border: none;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 20px;
+.user-pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  background: #fff1ad;
+  color: #6d5510;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 820px) {
+  .app-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .nav-actions {
+    justify-content: flex-start;
+  }
 }

@@ -1,84 +1,109 @@
 import { useState } from "react";
+import type { SyntheticEvent } from "react";
 import "./AuthModal.css";
-import axios from "axios";
-import API_URLS from "../services/api";
+import { authApi, getErrorMessage } from "../services/api";
+import { getSession, setToken } from "../utils/auth";
 
-export default function AuthModal({ onClose }: any) {
+export default function AuthModal({ onClose, onSuccess }: any) {
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const title = mode === "login" ? "Вход" : "Регистрация";
 
-  const login = async () => {
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setError("");
+    setLoading(true);
+
     try {
-      const res = await axios.post(`${API_URLS.auth}/auth/login`, {
+      if (mode === "register") {
+        await authApi.register({
+          email,
+          password,
+        });
+      }
+
+      const response: any = await authApi.login({
         email,
         password,
       });
 
-      localStorage.setItem("token", res.data.token);
-      window.location.reload();
-    } catch {
-      alert("Ошибка входа");
-    }
-  };
+      const token = response.token || response.Token || response.accessToken;
 
-  const register = async () => {
-    try {
-      await axios.post(`${API_URLS.auth}/auth/register`, {
-        email,
-        password,
-      });
-
-      alert("Регистрация успешна");
-      setIsLogin(true);
-    } catch {
-      alert("Ошибка регистрации");
+      if (!token) {
+        throw new Error("Backend не вернул token после входа.");
+      }
+      setToken(token);
+      const session = getSession();
+      if (!session) {
+        throw new Error("Не удалось прочитать token.");
+      }
+      onSuccess(session);
+      onClose();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="modal">
-      <div className="modal-content">
-        <h2>{isLogin ? "Вход" : "Регистрация"}</h2>
+    <div className="modal-backdrop">
+      <div className="modal auth-modal">
+        <div className="modal-header">
+          <h2>{title}</h2>
 
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <input
-          placeholder="Пароль"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <div className="buttons">
-          <button onClick={isLogin ? login : register}>
-            {isLogin ? "Войти" : "Регистрация"}
+          <button className="icon-button" type="button" onClick={onClose}>
+            ×
           </button>
         </div>
 
-        <div className="toggle-form">
-          {isLogin ? (
-            <p>
-              Нет аккаунта?{" "}
-              <span onClick={() => setIsLogin(false)} className="link">
-                Зарегистрироваться
-              </span>
-            </p>
-          ) : (
-            <p>
-              Уже есть аккаунт?{" "}
-              <span onClick={() => setIsLogin(true)} className="link">
-                Войти
-              </span>
-            </p>
-          )}
-        </div>
+        <form className="form-grid" onSubmit={submit}>
+          <label>
+            Email
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+            />
+          </label>
 
-        <button onClick={onClose}>Закрыть</button>
+          <label>
+            Пароль
+            <input
+              required
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="password"
+            />
+          </label>
+
+          {error && <p className="error-box">{error}</p>}
+
+          <button
+            className="primary full-width"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Подождите..." : title}
+          </button>
+        </form>
+
+        <button
+          className="link-button"
+          type="button"
+          onClick={() => setMode(mode === "login" ? "register" : "login")}
+        >
+          {mode === "login"
+            ? "Нет аккаунта? Зарегистрироваться"
+            : "Уже есть аккаунт? Войти"}
+        </button>
       </div>
     </div>
   );

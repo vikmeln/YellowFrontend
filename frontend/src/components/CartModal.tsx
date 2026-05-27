@@ -1,123 +1,188 @@
-import { useEffect, useState } from "react";
-import {
-  getCart,
-  removeFromCart,
-  updateCartQuantity,
-  createOrder,
-} from "../services/cart";
+import { useEffect, useMemo, useState } from "react";
 import "./CartModal.css";
+import { cartApi, getErrorMessage, orderApi } from "../services/api";
 
-export default function CartModal({ onClose }: any) {
-  const [cartItems, setCartItems] = useState<any[]>([]);
+export default function CartModal({ onClose, onOrderCreated }: any) {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const total = useMemo(() => {
+    return items.reduce((sum, item) => {
+      return sum + (item.total || item.price * item.quantity);
+    }, 0);
+  }, [items]);
+
+  function formatPrice(value: number) {
+    return new Intl.NumberFormat("ru-RU", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2,
+    }).format(value || 0);
+  }
+
+  async function loadCart() {
+    setError("");
+    setLoading(true);
+    try {
+      const data: any = await cartApi.get();
+      setItems(data || []);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    fetchCart();
+    loadCart();
   }, []);
 
-  const fetchCart = async () => {
+  async function updateQuantity(productId: number, quantity: number) {
+    const nextQuantity = Math.max(1, quantity);
+    setActionLoading(true);
     try {
-      const data = await getCart();
-      setCartItems(data);
-    } catch (error) {
-      alert("Ошибка при получении данных корзины");
+      await cartApi.updateQuantity(productId, nextQuantity);
+      await loadCart();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setActionLoading(false);
     }
-  };
+  }
 
-  const handleQuantityChange = async (productId: number, quantity: number) => {
-    if (quantity < 1) return;
-
+  async function removeItem(productId: number) {
+    setActionLoading(true);
     try {
-      await updateCartQuantity(productId, quantity);
-      fetchCart();
-    } catch (error) {
-      alert("Ошибка при обновлении количества товара");
+      await cartApi.remove(productId);
+      await loadCart();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setActionLoading(false);
     }
-  };
+  }
 
-  const handleRemove = async (productId: number) => {
+  async function clearCart() {
+    setActionLoading(true);
     try {
-      await removeFromCart(productId);
-      fetchCart();
-    } catch (error) {
-      alert("Ошибка при удалении товара из корзины");
+      await cartApi.clear();
+      await loadCart();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setActionLoading(false);
     }
-  };
+  }
 
-  const calculateTotal = (cartItems: any[]) => {
-    let total = 0;
-    cartItems.forEach((item) => {
-      total += item.price * item.quantity;
-    });
-    return total.toFixed(2);
-  };
-
-  const handleOrder = async () => {
+  async function checkout() {
+    setActionLoading(true);
     try {
-      await createOrder();
-      alert("Заказ оформлен успешно!");
+      await orderApi.create();
+      await loadCart();
+
+      if (onOrderCreated) {
+        onOrderCreated();
+      }
       onClose();
-    } catch (error) {
-      alert("Ошибка при оформлении заказа");
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setActionLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="modal">
-      <div className="modal-content">
-        <h2>Корзина</h2>
-        {cartItems.length === 0 ? (
-          <p>Ваша корзина пуста</p>
-        ) : (
-          cartItems.map((item: any) => (
-            <div className="cart-item" key={item.productId}>
-              <div className="cart-item-info">
-                <h3 className="cart-item-title">{item.name}</h3>
-                <p className="cart-item-price">{item.price} $</p>
-              </div>
-              <div className="cart-item-quantity">
+    <div className="modal-backdrop">
+      <div className="modal wide-modal">
+        <div className="modal-header">
+          <h2>Корзина</h2>
+
+          <button className="icon-button" type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        {error && <p className="error-box">{error}</p>}
+
+        {loading && <p>Загрузка...</p>}
+
+        {!loading && !items.length && (
+          <div className="empty-state">Корзина пустая.</div>
+        )}
+
+        {items.length > 0 && (
+          <div className="stack">
+            {items.map((item) => (
+              <div className="cart-row" key={item.productId}>
+                <div>
+                  <strong>{item.name}</strong>
+                  <p className="muted">{formatPrice(item.price)} за 1 шт.</p>
+                </div>
+
+                <div className="quantity-control">
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() =>
+                      updateQuantity(item.productId, item.quantity - 1)
+                    }
+                  >
+                    −
+                  </button>
+
+                  <span>{item.quantity}</span>
+
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() =>
+                      updateQuantity(item.productId, item.quantity + 1)
+                    }
+                  >
+                    +
+                  </button>
+                </div>
+
+                <strong>
+                  {formatPrice(item.total || item.price * item.quantity)}
+                </strong>
+
                 <button
-                  onClick={() =>
-                    handleQuantityChange(item.productId, item.quantity - 1)
-                  }
+                  className="danger"
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => removeItem(item.productId)}
                 >
-                  -
-                </button>
-                <input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    handleQuantityChange(
-                      item.productId,
-                      Math.max(parseInt(e.target.value) || 1, 1),
-                    )
-                  }
-                />
-                <button
-                  onClick={() =>
-                    handleQuantityChange(item.productId, item.quantity + 1)
-                  }
-                >
-                  +
+                  Удалить
                 </button>
               </div>
+            ))}
+
+            <div className="modal-footer">
               <button
-                onClick={() => handleRemove(item.productId)}
-                className="remove-btn"
+                className="secondary"
+                type="button"
+                disabled={actionLoading}
+                onClick={clearCart}
               >
-                ✖
+                Очистить
+              </button>
+
+              <div className="cart-total">Итого: {formatPrice(total)}</div>
+
+              <button
+                className="primary"
+                type="button"
+                disabled={actionLoading || !items.length}
+                onClick={checkout}
+              >
+                Оформить заказ
               </button>
             </div>
-          ))
+          </div>
         )}
-        <div className="total">
-          <h3>Общая сумма: {calculateTotal(cartItems)} $</h3>
-        </div>
-        {cartItems.length > 0 && (
-          <button onClick={handleOrder} className="order-btn">
-            Оформить заказ
-          </button>
-        )}
-        <button onClick={onClose}>Закрыть</button>
       </div>
     </div>
   );

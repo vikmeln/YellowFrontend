@@ -1,35 +1,50 @@
 import "./ProductCard.css";
-import { addToCart } from "../services/cart";
 
-export default function ProductCard({ product }: any) {
-  const handleAdd = async () => {
-    try {
-      await addToCart(product.id, 1);
-      alert("Добавлено в корзину");
-    } catch {
-      alert("Нужно войти");
-    }
-  };
+export default function ProductCard({ product, categories, onAddToCart }: any) {
+  const categoryName =
+    categories.find((category: any) => category.id === product.categoryId)
+      ?.name || "Без категории";
+
+  function formatPrice(value: number) {
+    return new Intl.NumberFormat("ru-RU", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2,
+    }).format(value || 0);
+  }
 
   return (
-    <div className="card">
-      <div className="image-wrapper">
-        <img src={product.imageUrl} alt={product.name} />
+    <article className="product-card">
+      <div className="product-image-wrap">
+        {product.imageUrl ? (
+          <img src={product.imageUrl} alt={product.name} />
+        ) : (
+          <span>Нет фото</span>
+        )}
       </div>
 
-      <div className="card-content">
-        <h3 className="title">{product.name}</h3>
+      <div className="product-content">
+        <div>
+          <p className="badge">{categoryName}</p>
+          <h3>{product.name}</h3>
 
-        <p className="description">{product.description}</p>
+          <p className="muted">
+            {product.description || "Описание пока не добавлено"}
+          </p>
+        </div>
 
-        <div className="bottom">
-          <div className="price">{product.price} $</div>
+        <div className="product-footer">
+          <strong>{formatPrice(product.price)}</strong>
 
-          <button onClick={handleAdd} className="buy-btn">
+          <button
+            className="primary"
+            type="button"
+            onClick={() => onAddToCart(product)}
+          >
             В корзину
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

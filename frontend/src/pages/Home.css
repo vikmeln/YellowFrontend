@@ -1,0 +1,23 @@
+.page-shell {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 4rem;
+}
+
+.toolbar-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 260px);
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #efdda0;
+  border-radius: 28px;
+  background: #fffdf1;
+  box-shadow: 0 18px 45px rgba(114, 91, 14, 0.09);
+}
+
+@media (max-width: 820px) {
+  .toolbar-card {
+    grid-template-columns: 1fr;
+  }
+}
