@@ -35,6 +35,9 @@ export default function Admin({ session }: any) {
   const [productForm, setProductForm] = useState<any>(emptyProductForm);
   const [categoryName, setCategoryName] = useState("");
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageInputKey, setImageInputKey] = useState(0);
+  const [imageUploading, setImageUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -102,12 +105,63 @@ export default function Admin({ session }: any) {
     };
   }
 
+  function clearImageFile() {
+    setImageFile(null);
+    setImageInputKey((current) => current + 1);
+  }
+
+  async function uploadImageIfSelected() {
+    if (!imageFile) {
+      return productForm.imageUrl.trim() || null;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(imageFile.type)) {
+      throw new Error("Можно загружать только JPG, PNG или WEBP.");
+    }
+
+    if (imageFile.size > 5 * 1024 * 1024) {
+      throw new Error("Размер картинки должен быть до 5 MB.");
+    }
+
+    setImageUploading(true);
+
+    try {
+      const result: any = await productApi.createUploadUrl(
+        imageFile.name,
+        imageFile.type,
+      );
+
+      const uploadResponse = await fetch(result.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": imageFile.type,
+        },
+        body: imageFile,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(
+          `Ошибка загрузки изображения: ${uploadResponse.status}`,
+        );
+      }
+
+      return result.imageUrl;
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
   async function saveProduct(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setMessage("");
     try {
+      if (imageUploading) {
+        throw new Error("Дождитесь завершения сохранения изображения.");
+      }
+
       const payload = createProductPayload();
+
       if (!payload.name) {
         throw new Error("Введите название товара.");
       }
@@ -120,17 +174,27 @@ export default function Admin({ session }: any) {
       if (!payload.categoryId) {
         throw new Error("Выберите категорию товара.");
       }
+
+      const imageUrl = await uploadImageIfSelected();
+
+      const finalPayload = {
+        ...payload,
+        imageUrl,
+      };
+
       if (productForm.id) {
         await productApi.update(productForm.id, {
-          ...payload,
+          ...finalPayload,
           isActive: productForm.isActive,
         });
         setMessage("Товар обновлён.");
       } else {
-        await productApi.create(payload);
+        await productApi.create(finalPayload);
         setMessage("Товар добавлен.");
       }
+
       setProductForm(emptyProductForm);
+      clearImageFile();
       await loadAdminData();
     } catch (requestError) {
       setError(getErrorMessage(requestError));
@@ -148,6 +212,7 @@ export default function Admin({ session }: any) {
       categoryId: product.categoryId ? String(product.categoryId) : "",
       isActive: Boolean(product.isActive),
     });
+    clearImageFile();
     setTab("products");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -315,15 +380,30 @@ export default function Admin({ session }: any) {
             <label>
               Изображение
               <input
-                value={productForm.imageUrl}
-                onChange={(event) =>
-                  setProductForm({
-                    ...productForm,
-                    imageUrl: event.target.value,
-                  })
-                }
+                key={imageInputKey}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] || null;
+                  setImageFile(file);
+                  setError("");
+                  setMessage("");
+                }}
               />
             </label>
+
+            {imageFile && (
+              <p className="file-hint">
+                Выбран файл: {imageFile.name} —{" "}
+                {(imageFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+            )}
+
+            {!imageFile && productForm.imageUrl && (
+              <div className="file-preview">
+                <img src={productForm.imageUrl} alt="Изображение товара" />
+              </div>
+            )}
 
             <label>
               Категория
@@ -364,15 +444,23 @@ export default function Admin({ session }: any) {
             )}
 
             <div className="button-row">
-              <button className="primary" type="submit">
-                Сохранить
+              <button
+                className="primary"
+                type="submit"
+                disabled={imageUploading}
+              >
+                {imageUploading ? "Сохраняем..." : "Сохранить"}
               </button>
 
               {productForm.id && (
                 <button
                   className="secondary"
                   type="button"
-                  onClick={() => setProductForm(emptyProductForm)}
+                  disabled={imageUploading}
+                  onClick={() => {
+                    setProductForm(emptyProductForm);
+                    clearImageFile();
+                  }}
                 >
                   Отмена
                 </button>

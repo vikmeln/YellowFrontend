@@ -17,6 +17,22 @@ export const orderStatuses = [
   { value: 4, label: "Cancelled" },
 ];
 
+export type UploadUrlResponse = {
+  uploadUrl: string;
+  imageUrl: string;
+  key: string;
+};
+
+export type UserProfile = {
+  id?: string;
+  userName?: string;
+  UserName?: string;
+  email?: string;
+  Email?: string;
+  avatarUrl?: string | null;
+  AvatarUrl?: string | null;
+};
+
 export class ApiError extends Error {
   status: number;
 
@@ -148,6 +164,20 @@ export const productApi = {
     return apiRequest(API_ORIGINS.products, "/Products/admin");
   },
 
+  createUploadUrl(fileName: string, contentType: string) {
+    return apiRequest<UploadUrlResponse>(
+      API_ORIGINS.products,
+      "/Products/upload-url",
+      {
+        method: "POST",
+        body: {
+          fileName,
+          contentType,
+        },
+      },
+    );
+  },
+
   create(payload: any) {
     return apiRequest(API_ORIGINS.products, "/Products", {
       method: "POST",
@@ -265,5 +295,32 @@ export const orderApi = {
 export const userApi = {
   getAll() {
     return apiRequest(API_ORIGINS.auth, "/Users");
+  },
+
+  getMe() {
+    return apiRequest<UserProfile>(API_ORIGINS.auth, "/Users/me");
+  },
+
+  createAvatarUploadUrl(fileName: string, contentType: string) {
+    return apiRequest<UploadUrlResponse>(
+      API_ORIGINS.auth,
+      "/Users/me/avatar/upload-url",
+      {
+        method: "POST",
+        body: {
+          fileName,
+          contentType,
+        },
+      },
+    );
+  },
+
+  updateAvatar(avatarUrl: string) {
+    return apiRequest<UserProfile>(API_ORIGINS.auth, "/Users/me/avatar", {
+      method: "PATCH",
+      body: {
+        avatarUrl,
+      },
+    });
   },
 };

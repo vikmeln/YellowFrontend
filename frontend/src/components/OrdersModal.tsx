@@ -62,7 +62,6 @@ export default function OrdersModal({ onClose, refreshKey }: any) {
 
         <div className="stack">
           {orders.map((order) => {
-            const items = order.orderItems || order.items || [];
             const currentStatus = statusLabel(order.status);
             const canCancel =
               currentStatus === "Created" || currentStatus === "Paid";

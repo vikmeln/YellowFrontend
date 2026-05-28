@@ -3,15 +3,20 @@ import { isAdminSession, isCustomerSession } from "../utils/auth";
 
 export default function Header({
   session,
+  profile,
   view,
   onViewChange,
   onLoginClick,
   onLogout,
   onCartClick,
   onOrdersClick,
+  onProfileClick,
 }: any) {
   const isAdmin = isAdminSession(session);
   const isCustomer = isCustomerSession(session);
+
+  const avatarUrl =
+    profile?.avatarUrl || profile?.AvatarUrl || "/default-avatar.png";
 
   return (
     <header className="app-header">
@@ -51,6 +56,16 @@ export default function Header({
         {session ? (
           <>
             <span className="user-pill">{session.role || "User"}</span>
+
+            <button
+              className="avatar-button"
+              type="button"
+              onClick={onProfileClick}
+              aria-label="Открыть профиль"
+              title="Профиль"
+            >
+              <img src={avatarUrl} alt="Профиль" />
+            </button>
 
             <button className="secondary" type="button" onClick={onLogout}>
               Выйти

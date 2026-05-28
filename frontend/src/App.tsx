@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import Header from "./components/Header";
 import AuthModal from "./components/AuthModal";
@@ -6,6 +6,8 @@ import CartModal from "./components/CartModal";
 import OrdersModal from "./components/OrdersModal";
 import Home from "./pages/Home";
 import Admin from "./pages/Admin";
+import UserProfileModal from "./components/UserProfileModal";
+import { userApi, type UserProfile } from "./services/api";
 
 import {
   clearToken,
@@ -28,6 +30,8 @@ export default function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   function logout() {
     clearToken();
@@ -35,6 +39,8 @@ export default function App() {
     setView("catalog");
     setCartOpen(false);
     setOrdersOpen(false);
+    setUserProfile(null);
+    setProfileOpen(false);
   }
 
   function changeView(nextView: "catalog" | "admin") {
@@ -69,6 +75,35 @@ export default function App() {
     setOrdersOpen(true);
   }
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadProfile() {
+      if (!session) {
+        setUserProfile(null);
+        return;
+      }
+
+      try {
+        const profile = await userApi.getMe();
+
+        if (!ignore) {
+          setUserProfile(profile);
+        }
+      } catch {
+        if (!ignore) {
+          setUserProfile(null);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      ignore = true;
+    };
+  }, [session?.token]);
+
   return (
     <div className="app">
       <Header
@@ -79,6 +114,8 @@ export default function App() {
         onLogout={logout}
         onCartClick={openCart}
         onOrdersClick={openOrders}
+        profile={userProfile}
+        onProfileClick={() => setProfileOpen(true)}
       />
       {view === "admin" && session && isAdminSession(session) ? (
         <Admin session={session} />
@@ -113,6 +150,13 @@ export default function App() {
           refreshKey={ordersRefreshKey}
         />
       )}
+      <UserProfileModal
+        open={profileOpen}
+        session={session}
+        profile={userProfile}
+        onClose={() => setProfileOpen(false)}
+        onProfileUpdated={setUserProfile}
+      />
     </div>
   );
 }

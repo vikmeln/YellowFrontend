@@ -101,3 +101,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+.file-hint {
+  margin: -0.4rem 0 0.2rem;
+  font-size: 0.85rem;
+  color: #7a6a35;
+}
+
+.file-preview {
+  border: 1px solid #eadb9c;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff8d8;
+}
+
+.file-preview img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
